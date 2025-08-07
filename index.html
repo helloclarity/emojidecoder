@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emoji Coder (Secure)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'VT323', monospace;
+            background-color: #0d1117; /* Dark background */
+            background-image: linear-gradient(rgba(0, 255, 255, 0.07) 1px, transparent 1px);
+            background-size: 100% 3px;
+            overflow: hidden;
+        }
+        .font-pixel {
+            font-family: 'Press Start 2P', cursive;
+        }
+        .app-container {
+            background-color: rgba(22, 27, 34, 0.8);
+            border: 2px solid #00eaff;
+            box-shadow: 0 0 15px #00eaff, 0 0 25px #00eaff inset;
+            backdrop-filter: blur(5px);
+        }
+        
+        /* --- NEON & MACHINE STYLES --- */
+        .text-neon-blue {
+            color: #fff;
+            text-shadow: 0 0 5px #00eaff, 0 0 10px #00eaff, 0 0 20px #00eaff;
+        }
+        .text-neon-red {
+            color: #ff5555;
+            text-shadow: 0 0 5px #ff5555, 0 0 10px #ff5555;
+        }
+        
+        .btn-machine {
+            background-color: transparent;
+            border: 2px solid #00eaff;
+            color: #00eaff;
+            transition: all 0.2s ease;
+            text-shadow: 0 0 5px #00eaff;
+        }
+        .btn-machine:hover {
+            background-color: rgba(0, 234, 255, 0.2);
+            box-shadow: 0 0 10px #00eaff;
+        }
+        .btn-machine:active {
+            transform: scale(0.95);
+        }
+
+        /* --- PASSWORD MODAL --- */
+        #password-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 100;
+            transition: opacity 0.5s ease;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        /* --- ANIMATION STYLES --- */
+        @keyframes pop-in {
+            from { transform: scale(0); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .emoji-char, .text-char {
+            display: inline-block;
+            animation: pop-in 0.2s ease forwards;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4 text-lg">
+
+    <!-- Password Protection Modal -->
+    <div id="password-modal" class="flex items-center justify-center">
+        <div class="w-full max-w-sm p-8 border-2 border-red-500 rounded-lg shadow-lg" style="box-shadow: 0 0 15px #ff5555;">
+            <h2 class="text-2xl text-center text-neon-red font-pixel mb-4">ACCESS DENIED</h2>
+            <p class="text-center text-red-400 mb-6">AUTHENTICATION REQUIRED</p>
+            <input type="password" id="password-input" class="w-full p-3 mb-4 bg-black/50 text-white border-2 border-red-500 rounded-lg focus:ring-2 focus:ring-red-400 focus:border-red-400" placeholder="PASSWORD...">
+            <button id="password-submit" class="w-full py-3 rounded-lg text-red-400 border-2 border-red-500 hover:bg-red-500/20 transition-colors">AUTHENTICATE</button>
+        </div>
+    </div>
+
+    <!-- Main App Container (Hidden Initially) -->
+    <div id="main-app" class="app-container w-full max-w-2xl mx-auto rounded-2xl p-6 md:p-8 hidden">
+        
+        <!-- Header -->
+        <div class="text-center mb-4">
+            <h1 class="text-4xl md:text-5xl font-pixel text-neon-blue">
+                Emoji Coder
+            </h1>
+            <p id="mode-status" class="text-cyan-300 mt-4">MODE: ENCODE (TEXT > EMOJI)</p>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex justify-center mb-4 gap-4">
+            <button id="swap-btn" class="btn-machine py-2 px-4 rounded-lg">TRANSLATE</button>
+            <button id="copyBtn" class="btn-machine py-2 px-4 rounded-lg">COPY OUTPUT</button>
+        </div>
+
+        <!-- IO Area -->
+        <div class="grid grid-cols-1 gap-4">
+            <!-- Input Area -->
+            <div>
+                <label id="input-label" for="io-input" class="block mb-2 text-sm font-medium text-cyan-300">// INPUT_BUFFER (TEXT):</label>
+                <textarea id="io-input" rows="5" class="w-full p-4 bg-black/50 text-white border-2 border-cyan-500 rounded-lg focus:ring-2 focus:ring-cyan-300 focus:border-cyan-300 transition duration-200" placeholder="Awaiting input..."></textarea>
+            </div>
+
+            <!-- Output Area -->
+            <div>
+                 <label id="output-label" for="io-output" class="block mb-2 text-sm font-medium text-cyan-300">// OUTPUT_STREAM (EMOJI):</label>
+                <div id="io-output" class="w-full p-4 min-h-[140px] bg-black/50 rounded-lg border-2 border-dashed border-cyan-500 text-2xl select-all flex flex-wrap items-center">
+                    <!-- Converted content appears here -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Message Box for Copy Confirmation -->
+        <div id="messageBox" class="fixed bottom-5 right-5 bg-cyan-500 text-black py-2 px-4 rounded-lg shadow-xl translate-y-20 opacity-0 transition-all duration-300 border-2 border-white">
+            > PROTOCOL COPIED TO CLIPBOARD
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const passwordModal = document.getElementById('password-modal');
+        const passwordInput = document.getElementById('password-input');
+        const passwordSubmit = document.getElementById('password-submit');
+        const mainApp = document.getElementById('main-app');
+        
+        const ioInput = document.getElementById('io-input');
+        const ioOutput = document.getElementById('io-output');
+        const copyBtn = document.getElementById('copyBtn');
+        const swapBtn = document.getElementById('swap-btn');
+        
+        const modeStatus = document.getElementById('mode-status');
+        const inputLabel = document.getElementById('input-label');
+        const outputLabel = document.getElementById('output-label');
+        const messageBox = document.getElementById('messageBox');
+
+        // --- State ---
+        let mode = 'encode'; // 'encode' or 'decode'
+        const correctPassword = 'loser';
+
+        // --- Mappings ---
+        const emojiMap = {
+            'a': '🍎', 'b': '🍌', 'c': '🐱', 'd': '🍩', 'e': '🙄', 'f': '🖕', 
+            'g': '🍇', 'h': '🏠', 'i': '💡', 'j': '💎', 'k': '🥝', 'l': '🍋', 
+            'm': '🍄', 'n': '🍊', 'o': '👀', 'p': '🍕', 'q': '👑', 'r': '🚀', 
+            's': '⭐', 't': '🐢', 'u': '🦄', 'v': '🌋', 'w': '🍉', 'x': '❌', 
+            'y': '☀️', 'z': '🦓'
+        };
+        // Create the reverse map for decoding automatically
+        const reverseEmojiMap = Object.fromEntries(Object.entries(emojiMap).map(([key, value]) => [value, key]));
+
+        // --- Functions ---
+
+        /**
+         * Checks the entered password and unlocks the app.
+         */
+        function handlePassword() {
+            if (passwordInput.value === correctPassword) {
+                passwordModal.style.opacity = '0';
+                setTimeout(() => {
+                    passwordModal.classList.add('hidden');
+                    mainApp.classList.remove('hidden');
+                }, 500);
+            } else {
+                passwordInput.classList.add('shake');
+                passwordInput.value = ''; // Clear wrong password
+                setTimeout(() => passwordInput.classList.remove('shake'), 500);
+            }
+        }
+
+        /**
+         * Main handler for converting input based on the current mode.
+         */
+        function handleConversion() {
+            const text = ioInput.value;
+            ioOutput.innerHTML = ''; // Clear previous output
+
+            const result = (mode === 'encode') ? convertToEmoji(text) : convertToText(text);
+            
+            // Animate output
+            for (let i = 0; i < result.length; i++) {
+                const span = document.createElement('span');
+                span.className = (mode === 'encode') ? 'emoji-char' : 'text-char';
+                span.textContent = result[i];
+                span.style.animationDelay = `${i * 20}ms`;
+                if (result[i] === ' ') {
+                    span.innerHTML = '&nbsp;';
+                }
+                ioOutput.appendChild(span);
+            }
+        }
+
+        function convertToEmoji(text) {
+            let result = '';
+            for (const char of text.toLowerCase()) {
+                result += emojiMap[char] || char;
+            }
+            return result;
+        }
+
+        function convertToText(text) {
+            // Use a regex to split by our known emojis or keep single characters
+            const emojiRegex = new RegExp(`(${Object.keys(reverseEmojiMap).join('|')})`, 'g');
+            const parts = text.split(emojiRegex).filter(Boolean); // Split and remove empty strings
+            
+            let result = '';
+            for (const part of parts) {
+                result += reverseEmojiMap[part] || part;
+            }
+            return result;
+        }
+
+        /**
+         * Toggles between encode and decode modes.
+         */
+        function swapMode() {
+            mode = (mode === 'encode') ? 'decode' : 'encode';
+            
+            // Clear fields
+            ioInput.value = '';
+            ioOutput.innerHTML = '';
+
+            // Update UI labels
+            if (mode === 'encode') {
+                modeStatus.textContent = 'MODE: ENCODE (TEXT > EMOJI)';
+                inputLabel.textContent = '// INPUT_BUFFER (TEXT):';
+                outputLabel.textContent = '// OUTPUT_STREAM (EMOJI):';
+            } else {
+                modeStatus.textContent = 'MODE: DECODE (EMOJI > TEXT)';
+                inputLabel.textContent = '// ENCODED_STREAM (EMOJI):';
+                outputLabel.textContent = '// DECODED_BUFFER (TEXT):';
+            }
+        }
+
+        /**
+         * Copies the output content to the clipboard.
+         */
+        function copyToClipboard() {
+            const textToCopy = ioOutput.textContent;
+            if (!textToCopy) return;
+
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                showCopyMessage();
+            });
+        }
+        
+        function showCopyMessage() {
+            messageBox.classList.remove('translate-y-20', 'opacity-0');
+            messageBox.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                messageBox.classList.add('translate-y-20', 'opacity-0');
+                messageBox.classList.remove('translate-y-0', 'opacity-100');
+            }, 2000);
+        }
+
+        // --- Event Listeners ---
+        passwordSubmit.addEventListener('click', handlePassword);
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handlePassword();
+        });
+        
+        ioInput.addEventListener('input', handleConversion);
+        swapBtn.addEventListener('click', swapMode);
+        copyBtn.addEventListener('click', copyToClipboard);
+
+    </script>
+</body>
+</html>
