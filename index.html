@@ -26,13 +26,13 @@
 
         /* Glowing text and border effect */
         .glow {
-            --glow-color: #00ffff; /* Neon blue/cyan */
+            --glow-color: #39ff14; /* Neon Green */
             text-shadow: 0 0 5px var(--glow-color), 0 0 10px var(--glow-color), 0 0 20px var(--glow-color);
             color: var(--glow-color);
         }
         
         .border-glow {
-            --glow-color: #00ffff;
+            --glow-color: #39ff14; /* Neon Green */
             border-color: var(--glow-color);
             box-shadow: 0 0 5px var(--glow-color), inset 0 0 5px var(--glow-color);
         }
@@ -74,12 +74,12 @@
         /* Custom styling for textareas and inputs to match the theme */
         textarea, input[type="password"] {
             background-color: rgba(15, 23, 42, 0.5); /* Semi-transparent slate-900 */
-            caret-color: #00ffff;
+            caret-color: #39ff14; /* Neon Green */
         }
         
         textarea:focus, input[type="password"]:focus {
             outline: none;
-            box-shadow: 0 0 8px #00ffff, inset 0 0 8px #00ffff;
+            box-shadow: 0 0 8px #39ff14, inset 0 0 8px #39ff14; /* Neon Green */
         }
 
         /* Custom button styling */
@@ -88,8 +88,8 @@
             transition: all 0.2s ease-in-out;
         }
         .btn-glitch:hover {
-            text-shadow: 0 0 8px #00ffff;
-            box-shadow: 0 0 8px #00ffff, inset 0 0 8px #00ffff;
+            text-shadow: 0 0 8px #39ff14; /* Neon Green */
+            box-shadow: 0 0 8px #39ff14, inset 0 0 8px #39ff14; /* Neon Green */
         }
         .btn-glitch:active {
             transform: translateY(2px);
@@ -164,7 +164,7 @@
             </main>
             
             <footer class="text-center mt-6">
-                <p class="text-glow text-sm">SYSTEM STATUS: <span class="text-green-400">ONLINE</span></p>
+                <p class="text-glow text-sm">SYSTEM STATUS: <span class="text-lime-400">ONLINE</span></p>
             </footer>
 
         </div>
@@ -188,6 +188,17 @@
             // --- STATE ---
             let isEncodeMode = true;
 
+            // --- HELPER FUNCTION ---
+            /**
+             * Cleans a string by removing common invisible Unicode characters like variant selectors.
+             * @param {string} str The string to sanitize.
+             * @returns {string} The sanitized string.
+             */
+            const sanitizeString = (str) => {
+                if (!str) return '';
+                return str.replace(/[\uFE00-\uFE0F]/g, '');
+            };
+
             // --- EMOJI MAPPING ---
             const emojiMap = {
                 'a': '🍎', 'b': '🍌', 'c': '🐱', 'd': '🍩', 'e': '🙄', 'f': '🖕', 
@@ -197,11 +208,8 @@
                 'y': '☀️', 'z': '🦓'
             };
             
-            // Create the reverse map for decoding.
-            // FIX: Clean the emoji characters as they are added to the reverse map
-            // to ensure lookups work even if the source emoji has invisible characters.
             const reverseEmojiMap = Object.fromEntries(
-                Object.entries(emojiMap).map(([key, value]) => [value.replace(/\uFE0F/g, ''), key])
+                Object.entries(emojiMap).map(([key, value]) => [sanitizeString(value), key])
             );
 
             // --- CORE FUNCTIONS ---
@@ -225,14 +233,10 @@
                 const input = inputText.value;
                 let output = '';
                 if (isEncodeMode) {
-                    // ENCODE: Text to Emoji
                     output = input.toLowerCase().split('').map(char => emojiMap[char] || char).join('');
                 } else {
-                    // DECODE: Emoji to Text
                     output = Array.from(input).map(char => {
-                        // FIX: Also strip potential Unicode variant selectors from the input character
-                        // to ensure it matches the cleaned key in the reverseEmojiMap.
-                        const cleanChar = char.replace(/\uFE0F/g, '');
+                        const cleanChar = sanitizeString(char);
                         return reverseEmojiMap[cleanChar] || char;
                     }).join('');
                 }
@@ -259,10 +263,10 @@
                 navigator.clipboard.writeText(outputText.value).then(() => {
                     const originalText = copyButton.innerHTML;
                     copyButton.textContent = 'COPIED!';
-                    copyButton.classList.add('text-green-400');
+                    copyButton.classList.add('text-lime-400');
                     setTimeout(() => {
                         copyButton.innerHTML = originalText;
-                        copyButton.classList.remove('text-green-400');
+                        copyButton.classList.remove('text-lime-400');
                     }, 2000);
                 }).catch(err => {
                     console.error('Failed to copy text: ', err);
@@ -281,6 +285,13 @@
             inputText.addEventListener('input', handleTranslation);
             swapButton.addEventListener('click', swapMode);
             copyButton.addEventListener('click', copyOutput);
+            inputText.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+                const sanitizedText = sanitizeString(pastedText);
+                document.execCommand('insertText', false, sanitizedText);
+            });
+
             passwordInput.focus();
         });
     </script>
